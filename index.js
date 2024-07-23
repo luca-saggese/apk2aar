@@ -6,19 +6,32 @@ const xml2js = require('xml2js');
 
 program
   .option('-i, --input <path>', 'APK file path')
+  .option('-x, --exclude <classes>', 'Classes to exclude, comma separated', value => value.split(','))
+  .option('-r, --exclude-resources', 'Exclude resources from AAR')
+  .option('-h, --help', 'Display help')
   .parse(process.argv);
 
 const options = program.opts();
 
-if (!options.input) {
-  console.error('APK file path is required');
-  process.exit(1);
+if (options.help || !options.input) {
+  console.log(`
+Usage: node index.js [options]
+
+Options:
+  -i, --input <path>          APK file path (required)
+  -x, --exclude <classes>     Classes to exclude, comma separated
+  -r, --exclude-resources     Exclude resources from AAR
+  -h, --help                  Display help
+  `);
+  process.exit(0);
 }
 
 const apkPath = path.resolve(options.input);
 const apkName = path.basename(apkPath, '.apk');
 const extractDir = path.resolve('tmp', apkName);
 const outputDir = path.resolve('out', apkName);
+const excludeClasses = options.exclude ? options.exclude.map(cls => cls.trim()) : [];
+const excludeResources = options.excludeResources || false;
 
 async function main() {
   try {
@@ -62,21 +75,25 @@ async function main() {
 
     // Ensure directories exist
     await fs.ensureDir(path.join(gradleProjectDir, 'src', 'main', 'java'));
-    await fs.ensureDir(path.join(gradleProjectDir, 'src', 'main', 'res'));
-    await fs.ensureDir(path.join(gradleProjectDir, 'src', 'main', 'assets'));
+    if (!excludeResources) {
+      await fs.ensureDir(path.join(gradleProjectDir, 'src', 'main', 'res'));
+      await fs.ensureDir(path.join(gradleProjectDir, 'src', 'main', 'assets'));
+    }
 
     // Copy AndroidManifest.xml
     await fs.copy(manifestPath, path.join(gradleProjectDir, 'src', 'main', 'AndroidManifest.xml'));
 
-    // Copy decompiled source files
-    await fs.copy(path.join(extractDir, 'smali'), path.join(gradleProjectDir, 'src', 'main', 'java'));
+    // Copy decompiled source files excluding specified classes
+    const smaliDir = path.join(extractDir, 'smali');
+    const javaDir = path.join(gradleProjectDir, 'src', 'main', 'java');
+    await copyFilesExclude(smaliDir, javaDir, excludeClasses);
 
-    // Copy decompiled resources
-    await fs.copy(path.join(extractDir, 'res'), path.join(gradleProjectDir, 'src', 'main', 'res'));
-
-    // Copy decompiled assets
-    if (await fs.pathExists(path.join(extractDir, 'assets'))) {
-      await fs.copy(path.join(extractDir, 'assets'), path.join(gradleProjectDir, 'src', 'main', 'assets'));
+    // Copy decompiled resources if not excluded
+    if (!excludeResources) {
+      await fs.copy(path.join(extractDir, 'res'), path.join(gradleProjectDir, 'src', 'main', 'res'));
+      if (await fs.pathExists(path.join(extractDir, 'assets'))) {
+        await fs.copy(path.join(extractDir, 'assets'), path.join(gradleProjectDir, 'src', 'main', 'assets'));
+      }
     }
 
     // Copy compiled libraries (JAR/AAR)
@@ -95,6 +112,26 @@ async function main() {
     console.log('AAR built successfully.');
   } catch (error) {
     console.error('Error:', error);
+  }
+}
+
+async function copyFilesExclude(srcDir, destDir, excludePatterns) {
+  const files = await fs.readdir(srcDir);
+
+  for (const file of files) {
+    const srcFile = path.join(srcDir, file);
+    const destFile = path.join(destDir, file);
+
+    const stat = await fs.stat(srcFile);
+    if (stat.isDirectory()) {
+      await fs.ensureDir(destFile);
+      await copyFilesExclude(srcFile, destFile, excludePatterns);
+    } else {
+      const shouldExclude = excludePatterns.some(pattern => srcFile.includes(pattern));
+      if (!shouldExclude) {
+        await fs.copy(srcFile, destFile);
+      }
+    }
   }
 }
 
