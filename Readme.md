@@ -1,60 +1,96 @@
 # APK to AAR Converter
 
-This Node.js program decompiles an APK file, copies the decompiled resources into an Android project, and compiles the project into an AAR file.
+This project converts an APK file into an Android AAR library. It uses `apktool` to decompile the APK and `gradle` to build the AAR. The library will be named after the package name from the manifest with `_library` appended.
 
-## Requirements
+## Prerequisites
+
+Ensure you have the following installed on your system:
 
 - Node.js
-- JDK 8
-- Gradle 7.0
-- Apktool 2.9.3
+- Java 8
+- Gradle
+- apktool (apktool_2.9.3.jar should be placed in the root directory of this project)
 
-## Overview
+## Project Structure
 
-This script automates the process of converting an APK file into an AAR file by performing the following steps:
-1. Decompiling the APK using Apktool.
-2. Creating a new Android library project.
-3. Copying the decompiled resources, including smali files and native libraries, into the new project.
-4. Compiling the project into an AAR file using Gradle.
+```
+apk-to-aar
+├── apktool_2.9.3.jar
+├── index.js
+├── package.json
+└── templates
+    ├── build.gradle
+    ├── settings.gradle
+    └── gradle
+        └── wrapper
+            ├── gradle-wrapper.jar
+            └── gradle-wrapper.properties
+```
+
+## Installation
+
+1. Clone the repository:
+    ```sh
+    git clone <repository_url>
+    cd apk-to-aar
+    ```
+
+2. Install dependencies:
+    ```sh
+    npm install
+    ```
+
+3. Ensure `apktool_2.9.3.jar` is placed in the root directory of the project.
 
 ## Usage
 
-1. Clone this repository or download the script.
-
-2. Ensure you have all the required software installed and correctly configured. Make sure `JAVA_HOME` points to your JDK 8 installation and Gradle 7.0 is available.
-
-3. Place `apktool_2.9.3.jar` in the same directory as the script.
-
-4. Open a terminal and navigate to the directory containing the script.
-
-5. Run the script with the path to your APK file as an argument:
-   ```sh
-   node index.js path/to/your/app.apk
-   ```
-
-6. The script will create a new Android project in the `out/<apk_name>` directory and generate an AAR file in `out/<apk_name>/MyLibraryProject/build/outputs/aar/`.
-
-## Example
-
-To decompile an APK named `example.apk` located in the `~/Downloads` directory:
+To convert an APK to an AAR, use the following command:
 
 ```sh
-node index.js ~/Downloads/example.apk
+npm start -- --input path/to/your.apk
 ```
 
-After running the script, the resulting AAR file will be located at:
+### Options
 
+- `-i, --input <path>`: APK file path (required)
+- `-x, --exclude <classes>`: Classes to exclude, comma separated
+- `-r, --exclude-resources`: Exclude resources from AAR
+- `-h, --help`: Display help
+
+### Examples
+
+1. Convert an APK to AAR:
+    ```sh
+    npm start -- --input path/to/your.apk
+    ```
+
+2. Convert an APK to AAR and exclude specific classes:
+    ```sh
+    npm start -- --input path/to/your.apk -x ClassToExclude1,ClassToExclude2
+    ```
+
+3. Convert an APK to AAR and exclude resources:
+    ```sh
+    npm start -- --input path/to/your.apk -r
+    ```
+
+## Output
+
+The generated AAR file will be located in the `out/<apk_name>/<package_name>_library/build/outputs/aar/` directory.
+
+Example:
 ```
-out/example/MyLibraryProject/build/outputs/aar/MyLibraryProject-release.aar
+AAR file generated: /path/to/project/out/com.example.app/com.example.app_library/build/outputs/aar/com.example.app_library-release.aar
 ```
 
-## Notes
+## Contributing
 
-- Ensure that `JAVA_HOME` is set to the path of JDK 8.
-- Ensure that the Gradle wrapper files (`gradlew` and `gradlew.bat`) are included and correctly configured to use Gradle 7.0.
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/my-feature`).
+3. Commit your changes (`git commit -m 'Add some feature'`).
+4. Push to the branch (`git push origin feature/my-feature`).
+5. Open a pull request.
 
-## Troubleshooting
+## License
 
-- **Unsupported class file major version 66**: This error indicates that you are using a version of Java other than Java 8. Make sure `JAVA_HOME` is pointing to JDK 8.
-- **Deprecated Gradle features were used**: This warning can usually be ignored, but updating your Gradle scripts to avoid deprecated features is recommended for future compatibility.
-
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
