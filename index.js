@@ -103,13 +103,14 @@ async function main() {
 
     // Step 5: Generate Gradle Wrapper
     console.log('Generating Gradle Wrapper...');
-    execSync(`gradle -p ${gradleProjectDir} wrapper --gradle-version 6.7`, { stdio: 'inherit' });
+    execSync(`gradle -p ${gradleProjectDir} wrapper --gradle-version 7.5`, { stdio: 'inherit' });
 
     // Step 6: Build AAR
     console.log('Building AAR...');
     execSync(`${path.join(gradleProjectDir, 'gradlew')} -p ${gradleProjectDir} build`, { stdio: 'inherit' });
 
-    console.log('AAR built successfully.');
+    const aarPath = path.join(gradleProjectDir, 'build', 'outputs', 'aar', `${libraryName}-release.aar`);
+    console.log(`AAR file generated: ${aarPath}`);
   } catch (error) {
     console.error('Error:', error);
   }
